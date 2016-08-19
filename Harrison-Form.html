@@ -1,0 +1,497 @@
+<!--
+This code is saved in the Institute front-end solution to keep it in TFS.
+
+It runs the Harrison Assessment purchase form that was implemented in Feb 2016.
+Edits were made to Able Commerce that allowed the iframe link to include the showQTY
+parameter. The parameter adds two hidden form elements, "hiddenRefID" and "hiddenProdQty".
+
+When individuals are added to the form, the ProdQty to be purchased is updated. The 
+RefID gets set with the return value when submiting the form. Upon Submit, the user
+is redirected to the /cart/basket to purchase assessments. The Reference ID gets placed 
+in the gift message for the store, and is later used to tie a form submission to the 
+store purchase since they are stored in seperate databases/sites.
+
+To deploy this code it must be copied into the "Landing Screen HTML" property of an
+InstituteSubsite node. It is used on the page https://institute.leadingre.com/Harrison.
+-->
+
+
+<p><iframe src="https://institute.leadingre.com/cart/instituteaddtocart.aspx?showQTY=true&ID=1859" height="200" width="300" scrolling="no" seamless="seamless" class="seamlessiframe" id="cart-product"></iframe></p>
+
+
+<style>
+  #float.fixed {
+    display: none;
+  }
+
+  #main {
+    width: 80%;
+    margin: 0 auto;
+  }
+
+  #cart-product {
+    display: none;
+  }
+
+  form {
+    display: none;
+  }
+
+  section {
+    margin-bottom: 20px;
+  }
+
+  h3 {
+    margin-bottom: 10px;
+  }
+
+  h4 span {
+    font-weight: bold;
+  }
+
+  h4.ui-state-active {
+    color: #505050;
+  }
+
+  a {
+    text-decoration: underline;
+  }
+
+  p {
+    margin-bottom: 5px;
+  }
+
+  button {
+    margin: 10px;
+  }
+
+    button.remove.ui-widget {
+      font-size: .8em;
+      margin-top: 15px;
+    }
+
+    button.ind-add-fields.ui-widget {
+      font-size: .9em;
+      margin-top: 15px;
+    }
+
+  textarea {
+    display: block;
+  }
+
+  input[id*="deadline"] {
+    margin-left: 15px;
+    margin-right: 10px;
+  }
+
+  .deadline-date {
+    display: none;
+    margin-left: 15px;
+    padding-left: 5px;
+    border-left: 2px solid #B1B1B1;
+  }
+
+  input:not([type=radio]):not([type=checkbox]) {
+    display: block;
+    width: 60%;
+    font-size: inherit;
+    font-weight: normal;
+    line-height: 1.2em;
+    text-align: left;
+    margin-bottom: 5px;
+  }
+
+  select {
+    display: block;
+    margin: 8px 0px 12px 10px;
+  }
+
+  .deadline-date > * {
+    display: inline-block;
+  }
+
+  .deadline-date > input[type=text] {
+    width: 180px;
+    display: inline-block;
+  }
+
+  select.ui-datepicker-month,
+  select.ui-datepicker-year {
+    background-color: #DBF171;
+  }
+
+  #message {
+    display: none;
+  }
+</style>
+
+
+<h2>Harrrison Assessment Request</h2>
+<p>To request an assessment, please complete the form below, and continue to checkout process.</p>
+
+<p id="loading">Loading Form...</p>
+<form name="Harrison" novalidate>
+  <section>
+    <label for="brokerage">Brokerage</label>
+    <input type="text" id="brokerage" name="brokerageName" required>
+  </section>
+  <section>
+    <h3>Person Ordering Assessment</h3>
+    <label for="req-name">Full Name</label>
+    <input type="text" id="req-name" name="orderPerson[Name]" required>
+    <label for="req-role">Position</label>
+    <input type="text" id="req-role" name="orderPerson[Position]" required>
+    <label for="req-email">Email</label>
+    <input type="email" id="req-email" name="orderPerson[Email]" required>
+    <label for="req-phone">Phone</label>
+    <input type="tel" id="req-phone" name="orderPerson[Phone]" required>
+  </section>
+  <section>
+    <h3>Request Individual(s) to be Assessed</h3>
+    <div id="individuals">
+
+    </div>
+    <button type="button" class="add-fields">+ Add New Individual</button>
+  </section>
+  <section class="requests">
+    <label for="request-text">Special Requests?</label>
+    <textarea id="request-text" name="specialRequest" placeholder="Other details or background you would like us to know about?" cols="40" rows="5" autocomplete="off"></textarea>
+  </section>
+  <p id="message" class="ui-state-highlight ui-corner-all"></p>
+  <button type="submit" class="submit" style="background-color: #adc051;">Confirm Purchase (<span class="qty">0</span>)</button>
+  <p>Please send any questions about the Harrison Assessment to <a href="mailto:Assessment@leadingre.com?subject=Harrison%20Assessment%20Questions">Assessment@leadingre.com</a>.</p>
+</form>
+
+
+<div id="template-individual" style="display: none;">
+  <div class="individual">
+    <section>
+      <label for="ind0-name">Full Name</label>
+      <input type="text" id="ind0-name" name="candidate[0][name]" autocomplete="off">
+      <label for="ind0-email">Email</label>
+      <input type="email" id="ind0-email" name="candidate[0][email]" autocomplete="off">
+      <label for="ind0-phone">Phone</label>
+      <input type="tel" id="ind0-phone" name="candidate[0][phone]" autocomplete="off">
+      <label for="ind0-location">Location</label>
+      <input type="text" id="ind0-location" name="candidate[0][location]" autocomplete="off">
+    </section>
+    <section>
+      <label for="ind0-role">What is the current role of this individual?</label>
+      <select id="ind0-role" name="candidate[0][role]" required>
+        <option value="" selected hidden>Please Choose...</option>
+        <option value="new hire">Applicant for Hire</option>
+        <option value="sales manager">Sales Manager</option>
+        <option value="other manager">Other Manager</option>
+        <option value="other employee">Other Employee</option>
+      </select>
+    </section>
+    <section>
+      <label for="ind0-reason">What is the reason for this individual's assessment?</label>
+      <select id="ind0-reason" name="candidate[0][reason]" required>
+        <option value="" selected hidden>Please Choose...</option>
+        <option value="hiring">Hiring / Selection</option>
+        <option value="promotion">Promotion</option>
+        <option value="development">Development</option>
+        <option value="team building">Team Building</option>
+      </select>
+    </section>
+    <section>
+      <label for="ind0-filter">The Harrison Assessment is available for multiple positions. Please indicate which generic filter you wish to be applied:</label>
+      <select id="ind0-filter" name="candidate[0][filter]" required>
+        <option value="" selected hidden>Please Choose...</option>
+        <option value="sales manager">Sales / Branch Manager</option>
+        <option value="middle management">Middle Management</option>
+        <option value="upper management">Upper Management</option>
+      </select>
+    </section>
+    <section>
+      <p>Is this assessment needed by a certain date?</p>
+      <input type="checkbox" name="candidate[0][hasDeadline]" id="ind0-deadline" value="true"><label for="ind0-deadline">Yes</label>
+      <div class="deadline-date">
+        <label for="ind0-deadline-date">Deadline</label>
+        <input type="text" name="candidate[0][deadlineDate]" id="ind0-deadline-date" placeholder="mm/dd/yyyy">
+      </div>
+    </section>
+    <button type="button" class="ind-add-fields">+ Add New Individual</button>
+    <button type="button" class="remove ui-state-error">- Remove this Individual</button>
+  </div>
+
+  <div id="cloneCopy">
+
+  </div>
+</div>
+
+<script>
+(function (window) {
+  var href = window.location.href;
+  var last = href.charAt(href.length - 1);
+  if (last !== '/') {
+    window.location.replace(href + '/');
+  }
+})(window);
+
+  $(document).ready(function () {
+  $.widget( "ui.accordion", $.ui.accordion, {
+    count: function() {
+      return this.headers.length;
+    },
+    refresh: function() {
+      this._super();
+      this._trigger("refresh", null, {count: this.count()})
+    }
+  });
+  $.datepicker.setDefaults({
+      showOn: "both",
+      buttonText: "Calendar",
+      minDate: 2,
+      showButtonPanel: true,
+      changeMonth: true,
+      changeYear: true
+  })
+
+  $('#cart-product').on('load', function(){
+      $("#individuals").accordion({
+        collapsible: true,
+        header: "h4",
+        heightStyle: "content",
+        activate: setFocus
+      });
+      $("#individuals").on("accordionrefresh", StoreQuantity)
+      $(".add-fields").button().on("click", cloneInd);
+      $(".submit").button().on("click", checkForm);
+      $("form[name='Harrison']").submit(submitForm)
+      $("#loading").hide().removeClass('spin');
+
+      var qty = parseInt(sessionStorage["HarrisonQty"]);
+      if (qty > 0) {
+        for(var i=0; qty > i; i++){
+           cloneInd();
+        }
+        formStorage("get", "Harrison");
+      }
+      $("form[name='Harrison']").show();
+  });
+
+});
+var cloneIndex = 1;
+function cloneInd() {
+  $("#template-individual  div:first-child").clone().appendTo("#cloneCopy");
+  var template = $("#cloneCopy  div:first-child");
+  template.find("*[id]").each(function() {
+    replace(this, 'id');
+  });
+  template.find("*[for]").each(function(){
+    replace(this, 'for');
+  });
+  template.find("*[name]").each(function(){
+    replace(this, 'name');
+  });
+
+  var clone = template.clone()
+                      .attr('id', "ind"+cloneIndex)
+                      .on('click', 'button.remove', remove)
+                      .on('click', 'button.ind-add-fields', triggerClone)
+                      .on('click', 'input[id$="deadline"]', showDate)
+                      .on('keyup focusout', 'input[id$="name"]', updateName);
+
+  var header = '<h4>Request for: <span>New Individual</span></h4>';
+  $("#individuals").append(header)
+                   .append(clone);
+
+  RefreshUI("#ind"+cloneIndex);
+
+  $("#cloneCopy").html("");
+  cloneIndex++;
+};
+
+function triggerClone() {
+  //for button .ind-add-fields
+  //setting the function clone() as callback inside of clone() itself caused an error
+  cloneInd();
+}
+
+function RefreshUI(cloneId) {
+  //$("#individuals > "+ cloneId +" select").selectmenu({width: 250});
+  $("#individuals > "+ cloneId +" button.remove").button();
+  $("#individuals > "+ cloneId +" button.ind-add-fields").button();
+
+  var acc = $("#individuals");
+  acc.accordion("refresh");
+  if(acc.accordion("count") === 1) {
+    //when one indv, close accordion in order to trigger active events
+    acc.accordion("option", "active", false);
+  };
+  acc.accordion("option", "active", -1);
+}
+
+function setFocus(event, ui) {
+  ui.newPanel.find("input:first").focus();
+}
+
+function replace(item, elAttr) {
+  var str = $(item).attr(elAttr);
+  var output = str.replace( /\d+/g, cloneIndex);
+  $(item).attr(elAttr, output);
+};
+
+function remove(e){
+  var loc = AccordionPanel($(e.target));
+  loc.panel.css('display','none').remove();
+  loc.header.remove();
+  $("#individuals").accordion("refresh");
+  $("#individuals").accordion({active: false})
+
+}
+
+function showDate(e){
+  var date = $(e.target).siblings(".deadline-date")[0];
+  $(date).toggle(100);
+  $(date).find("[id*='deadline']").datepicker();
+  $("#individuals").accordion("refresh");
+}
+
+function updateName(e){
+  var input = $(e.target);
+  var loc = AccordionPanel(input);
+  var headerName = loc.header.find("span");
+  var name = input.val() !== "" ? input.val() : "New Individual";
+
+  headerName.html(name);
+
+}
+
+function StoreQuantity(event, ui) {
+  var cart = iframeRef(document.getElementById('cart-product'));
+  cart.getElementById('hiddenProdQty').setAttribute('value', ui.count);
+  $("button.submit .qty").html(ui.count);
+}
+
+function checkForm(e) {
+  $("#message").hide();
+  var indvCount = $("form .individual").length;
+  if (indvCount === 0){
+    $("#message").html("Please add an Individual to be assessed.").show();
+    e.preventDefault();
+    return;
+  }
+
+  $("form .individual").each(function(index, el) {
+    var blank = 0;
+    var empty = function () {return $(this).val() == "";};
+    blank += $(el).find("input[type=text]:not([id*='deadline'])")
+                  .filter(empty)
+                  .length;
+    blank += $(el).find("select")
+                  .filter(empty)
+                  .length;
+    if(blank > 0) {
+      e.preventDefault();
+      $("#message").html("Required information about Individual("+ (index+1) +") is missing").show();
+      return;
+    }
+  });
+
+
+}
+
+function submitForm(e){
+  $("#message").hide;
+  e.preventDefault();
+
+  sessionStorage["HarrisonQty"] = $("#individuals").accordion("count");
+  formStorage("set", "Harrison");
+
+  var formObj = $("form[name='Harrison']").serializeJSON({checkboxUncheckedValue: "false", useIntKeysAsArrayIndex: "true"});
+  $.ajax({
+    type: 'GET',
+    url: '/lms/utilities.asmx/SaveHarrisonAssessment',
+    dataType: 'jsonp',
+    data: {saveObj: JSON.stringify(formObj)}
+  })
+  .done(function (response) {
+    if (response.message == "SUCCESS") {
+      var cart = iframeRef(document.getElementById('cart-product'));
+      cart.getElementById('hiddenRefID').setAttribute('value', response.id);
+      sendToCart();
+    } else {
+      alert("The form Submit did not return as expected, please contact LeadingRE Support");
+    }
+  })
+  .fail(function() {
+    alert("The form did not submit, please contact LeadingRE Support");
+  });
+}
+
+function sendToCart() {
+  $('#cart-product').off('load');
+  $('#cart-product').on('load', function() {
+    window.location.href = "checkout";
+  });
+  var cart = iframeRef(document.getElementById('cart-product'));
+  var btn = cart.getElementById('AddToCartLink1_AC');
+  btn.click();
+
+  console.log("sendToCart()")
+}
+
+function formStorage(type, name) {
+  var saveName = "["+ name +"]";
+  if (type.toLowerCase() === "set") {
+    var formArray = $("form[name='"+ name +"']").serializeArray();
+    $.each(formArray, function (i, obj) {
+      sessionStorage[obj.name + saveName] = obj.value;
+    });
+    return;
+  }
+  if (type.toLowerCase() === "get") {
+    $("form *:checkbox").attr('checked', 'checked');
+    var formArray = $("form[name='"+ name +"']").serializeArray();
+    $.each(formArray, function (i, obj) {
+      obj.value = sessionStorage[obj.name + saveName];
+      var formItem = $("[name='"+ obj.name +"']");
+
+      if (formItem.attr('type') == "checkbox")
+      {
+        if (obj.value == "true"){
+          var e = {
+            'target' : formItem
+          };
+          showDate(e);
+
+        } else {
+          formItem.removeAttr('checked');
+        }
+      }
+      else if (formItem.is("select"))
+      {
+        formItem.children("option").each(function(ii, opt) {
+          $(opt).removeAttr('selected');
+          if ($(opt).val() == obj.value)
+          {
+            $(opt).attr('selected', 'selected');
+          }
+        });
+      }else {
+        formItem.val(obj.value);
+      }
+    });
+    return;
+  }
+  return console.log("var type accepts only 'get' or 'set'");
+}
+
+function AccordionPanel(elem) {
+  var panel = $(elem).parents(".individual");
+  var header = $("h4[aria-controls="+ panel.attr('id') +"]");
+  return {
+      panel: panel,
+      header: header
+  };
+}
+
+function iframeRef( frameRef ) {
+    return frameRef.contentWindow
+        ? frameRef.contentWindow.document
+        : frameRef.contentDocument
+}
+</script>
